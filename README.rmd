@@ -1,0 +1,95 @@
+---
+title: "R Notebook"
+output: md_document
+---
+
+# Norwegian Administrative Maps
+
+This repository contains simplified polygon boundaries for various Norwegian administrative levels, designed for statistical visualization, analysis, and mapping purposes.
+All maps preserve boundaries between different administrative levels by aggregating polygons from the lowest level.
+
+## Map Versions
+
+This repo provides administrative boundaries at multiple levels:
+
+- **Grunnkrets** (Basic Statistical Unit Level 1)
+- **Delområde** (Basic Statistical Unit Level 2)
+- **Bydel** (Districts)
+- **Kommune/Bydel** (Municipalities and Districts where available)
+- **Kommune** (Municipalities)
+- **Fylke** (Counties)
+- **Økonomisk region** (Economic Region)
+
+Maps are available in two variants:
+- **Landmask**: Contains the clipped Norwegian coastline
+- **Extended**: Extends into the maritime border
+
+## Map Quality
+
+Current maps are available in multiple quality levels, representing polygon reduction:
+- **xs**: 99.9% reduction (smallest file size)
+- **s**: 99.5% reduction
+- **m**: 99% reduction
+- **l**: 95% reduction
+- **xl**: 90% reduction (highest detail)
+
+Historical maps dating back to 2002 are available in **xs** quality only to keep repository size manageable.
+
+## Available Data
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE} 
+source("scripts/utils.R") 
+```
+
+```{r, echo=FALSE, warning=FALSE}
+area_order <- c("Grunnkrets", "Delområde", "Bydel", "Kommune/Bydel", "Kommune", "Fylke", "Økonomisk region")
+size_order <- c("xs", "s", "m", "l", "xl")
+bound_order <- c("Landmask", "Extended")
+
+dl_base <- "https://raw.githubusercontent.com/thohan88/nor-maps/master/"
+
+dir("maps", full.names = TRUE, recursive = TRUE) |>
+  tibble(file_name = _) |>
+  filter(str_detect(file_name, "current")) |>
+  mutate(basename = basename(file_name) |> tools::file_path_sans_ext()) |>
+  mutate(
+    bound = ifelse(str_detect(file_name, "extended"), "Extended", "Landmask") |> fct_relevel(bound_order),
+    area = str_extract(basename, ".+(?=_(xs|s|m|l|xl)$)"),
+    size = str_extract(basename, "(xs|s|m|l|xl)$") |> fct_relevel(size_order),
+    area = case_match(
+      area,
+      "bydel" ~ "Bydel",
+      "delomraade" ~ "Delområde",
+      "grunnkrets" ~ "Grunnkrets",
+      "kommune_bydel" ~ "Kommune/Bydel",
+      "kommune" ~ "Kommune",
+      "fylke" ~ "Fylke",
+      "economic_region" ~ "Økonomisk region"
+    ) |> fct_relevel(area_order),
+    link = str_glue('<a href="{dl_base}{file_name}">{size}</a>') |> as.character()
+  ) |>
+  arrange(bound, area, size) |>
+  select(bound, Area = area, link) |>
+  group_by(bound, Area) |>
+  summarise(link = paste0(link, collapse = " "), .groups = "drop") |>
+  pivot_wider(values_from = link, names_from = bound) |>
+  knitr::kable("html", escape = FALSE)
+```
+
+## Usage
+
+### Direct Download
+All maps can be directly accessed via raw GitHub URLs: Use the `current`-folder to retrieve latest version, or 
+use the `versioned`-folder if you prefer maps to be freezed. 
+```
+https://raw.githubusercontent.com/thohan88/nor-maps/master/maps/current/extended/kommune_s.geojson
+```
+
+## Attribution
+
+- Administrative hierarchies are sourced from Statistics Norway's [Statistical Codelists](https://data.ssb.no/api/klass/v1/api-guide.html)
+- Administrative borders are obtained from [Geonorge](https://www.geonorge.no/)
+- Historical SOSI-format files were converted using [SOSICON](https://github.com/espena/sosicon)
+- Maps are simplified using [Mapshaper](https://github.com/mbloch/mapshaper)
+
+
