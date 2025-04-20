@@ -1,8 +1,3 @@
----
-title: "R Notebook"
-output: md_document
----
-
 # Norwegian Administrative Maps
 
 This repository contains simplified polygon boundaries for various Norwegian administrative levels, designed for statistical visualization, analysis, and mapping purposes.
@@ -92,7 +87,7 @@ Historical maps dating back to 2002 are available in **xs** quality only to keep
 All maps can be directly accessed via raw GitHub URLs: Use the `current`-folder to retrieve latest version, or 
 use the `versioned`-folder if you prefer maps to be freezed. 
 ```
-https://raw.githubusercontent.com/thohan88/nor-maps/master/maps/current/extended/kommune_s.geojson
+https://raw.githubusercontent.com/thohan88/nor-maps/master/maps/current/landmask/kommune_xs.geojson
 ```
 
 ## Attribution
