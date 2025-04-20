@@ -41,7 +41,7 @@ area_order <- c("Grunnkrets", "Delområde", "Bydel", "Kommune/Bydel", "Kommune",
 size_order <- c("xs", "s", "m", "l", "xl")
 bound_order <- c("Landmask", "Extended")
 
-dl_base <- "https://raw.githubusercontent.com/thohan88/nor-maps/master/"
+dl_base <- "https://raw.githubusercontent.com/thohan88/nor-maps/refs/heads/main/"
 
 dir("maps", full.names = TRUE, recursive = TRUE) |>
   tibble(file_name = _) |>
@@ -77,7 +77,7 @@ dir("maps", full.names = TRUE, recursive = TRUE) |>
 All maps can be directly accessed via raw GitHub URLs: Use the `current`-folder to retrieve latest version, or 
 use the `versioned`-folder if you prefer maps to be freezed. 
 ```
-https://raw.githubusercontent.com/thohan88/nor-maps/master/maps/current/landmask/kommune_xs.geojson
+https://raw.githubusercontent.com/thohan88/nor-maps/refs/heads/main/maps/current/landmask/kommune_s.geojson
 ```
 
 ## Attribution
