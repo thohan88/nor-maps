@@ -9,7 +9,7 @@ class_raw <- read_csv2("raw/classifications.csv.gz") |>
   select(-version_date)
 
 # Maps from geonorge contain certain grunnkrets which are not
-# part of the SSB-classification for old versions
+# part of the SSB-classification for old versions, extend it.
 class_ext <- tribble(
   ~year, ~grunnkrets_no, ~grunnkrets_name,
   2012,  "19021201",     "Skjelnan",
@@ -34,6 +34,7 @@ class_ext <- tribble(
 class <- bind_rows(class_raw, class_ext) |>
   arrange(desc(year), grunnkrets_no) |>
   group_by(year) |>
+  # Fill missing values with adjacent grunnkrets
   fill(delomraade_no:delomraade_name, kommune_bydel_no:economic_region_name) |>
   ungroup() |>
   nest(class = -year)
@@ -44,8 +45,14 @@ class <- bind_rows(class_raw, class_ext) |>
 
 year_min <- 2002
 
-gkrets_current <- tibble(map_id = "51d279f8-e2be-4f5e-9f72-1a53f7535ec1", year = 2025)
-gkrets_2024 <- tibble(map_id = "1f6e38a3-ca49-41d2-99bc-012deefe92d9", year = 2024)
+gkrets_current <- tibble(
+  map_id = "51d279f8-e2be-4f5e-9f72-1a53f7535ec1",
+  year = 2025
+)
+gkrets_2024 <- tibble(
+  map_id = "1f6e38a3-ca49-41d2-99bc-012deefe92d9",
+  year = 2024
+)
 
 gkrets_historic <- request("https://kartkatalog.geonorge.no/api/getdata/") |>
   req_url_path_append("02b6c97b-63da-4d46-9a70-6e9ef3442d54") |>
@@ -85,16 +92,28 @@ levels <- tibble(level = c(
 )) |>
   mutate(
     level_name = str_replace_all(level, "_no$|_name$", ""),
-    level_id = ceiling(row_number() / 2)
-  ) |>
-  group_by(level_id, level_name) |>
-  summarise(levels_list = list(level), .groups = "drop") |>
-  mutate(higher_levels = accumulate(
-    rev(levels_list),
-    \(x, y) c(y, x),
-    .init = list()
-  )[-1] |> rev()) |>
-  mutate(levels = map_chr(higher_levels, \(x) paste(x, collapse = ","))) |>
+    level_id = ceiling(row_number() / 2),
+    levels = case_match(
+      level_name,
+      "grunnkrets"      ~ list(c("grunnkrets", "delomraade", "kommune", "kommune_bydel", "bydel", "fylke", "economic_region")),
+      "delomraade"      ~ list(c("delomraade", "kommune", "kommune_bydel", "bydel", "fylke", "economic_region")),
+      "kommune_bydel"   ~ list(c("kommune_bydel", "kommune", "bydel", "fylke", "economic_region")),
+      "kommune"         ~ list(c("kommune", "fylke", "economic_region")),
+      "bydel"           ~ list(c("bydel", "kommune", "fylke", "economic_region")),
+      "economic_region" ~ list(c("economic_region", "fylke")),
+      "fylke"           ~ list(c("fylke"))
+    )
+  ) |> 
+  unnest(levels)
+
+levels_accumulated <- levels  |> 
+  left_join(levels, by = join_by(levels == level_name)) |> 
+  group_by(
+    level_id = level_id.x,
+    level_name = level_name
+  ) |> 
+  summarise(levels = paste(unique(level.y), collapse = ",")) |>
+  ungroup() |>
   select(level_id, level_name, levels)
 
 boundary <- c("landmask", "extended")
@@ -104,10 +123,9 @@ fn_versioned <- "maps/{version}/{year}/{boundary}/{level_name}.geojson"
 
 file_landmask <- "raw/norway_landmask.geojson.gz"
 
-
 foo <- gkrets |>
   crossing(map_size) |>
-  crossing(levels) |>
+  crossing(levels_accumulated) |>
   crossing(boundary) |>
   arrange(desc(year)) |>
   mutate(version = if_else(year == max(year), list(c("current", "versioned")), list("versioned"))) |>
@@ -122,4 +140,4 @@ foo <- gkrets |>
   left_join(class, by = "year") |> 
   mutate(foo = pmap(list(map_id, data, class), geonorge_grunnkrets_process_year, file_landmask, .progress = TRUE))
 
-knitr::render_markdown("README.rmd")
+#knitr::render_markdown("README.rmd")
