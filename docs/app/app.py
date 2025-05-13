@@ -199,6 +199,7 @@ def server(input, output, session):
             ui.span(icon_svg("github"), "Github"),
             href=url,
             class_="btn btn-sm btn-primary",
+            target="_blank"
         )
 
 
