@@ -55,6 +55,7 @@ bound_order <- c("Landmask", "Extended")
 dl_base <- "https://raw.githubusercontent.com/thohan88/nor-maps/refs/heads/main/"
 
 dir("../maps", full.names = TRUE, recursive = TRUE) |>
+  str_replace_all("\\.\\.", "") |> 
   tibble(file_name = _) |>
   filter(str_detect(file_name, "current")) |>
   mutate(basename = basename(file_name) |> tools::file_path_sans_ext()) |>
