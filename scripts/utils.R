@@ -3,6 +3,7 @@ library(httr2)
 library(sf)
 library(duckdb)
 library(rvest)
+library(pxweb)
 
 ############################# #
 # Geonorge ----
@@ -180,7 +181,7 @@ geonorge_grunnkrets_process_year <- function(map_id, data, class, file_landmask)
   foo <- system(str_glue("mapshaper-xl {tmpfile_extended} -clip {file_landmask} -o {tmpfile_landmask}"))
 
   prompt_simplify <- "mapshaper-xl {file} -simplify {ratio} keep-shapes -clean -o {tmpfile} precision=0.00001"
-  prompt_dissolve <- "mapshaper-xl {tmpfile} -dissolve {levels} -o {file_name}"
+  prompt_dissolve <- "mapshaper-xl {tmpfile} -dissolve {levels} calc='population = sum(population)' -filter '{level_name}_no != null' -o {file_name}"
 
   data |>
     nest(data = -c(ratio, boundary, quality)) |>
@@ -243,4 +244,41 @@ ssb_store_class_correspondance <- function(class_id, version_id, correspondance_
     select(-link)
 
   dbWriteTable(con, Id(schema = "raw", table = "class_correspondance"), data, append = TRUE)
+}
+
+ssb_download_tbl <- function(tbl_id) {
+  path_url <- paste0("http://data.ssb.no/api/v0/no/table/", tbl_id)
+  
+  info_query_raw <- request(path_url) |> 
+    req_perform()
+  
+  codes <- info_query_raw |> 
+    resp_body_json(simplifyVector = TRUE) |>
+    pluck("variables", "code")
+
+  dims <- rep("*", length(codes)) %>%
+    set_names(codes) %>%
+    as.list()
+
+  tbl_code <- pxweb_get_data(
+    url = path_url,
+    query = dims,
+    verbose = TRUE,
+    column.name.type = "code",
+    variable.value.type = "code"
+  )
+
+  tbl_name <- pxweb_get_data(
+    url = path_url,
+    query = dims,
+    verbose = TRUE,
+    column.name.type = "code",
+    variable.value.type = "text"
+  )
+
+  test <- bind_cols(
+    tbl_code %>% set_names(~ paste0(.x, "_code")),
+    tbl_name %>% set_names(~ paste0(.x, "_name"))
+  ) |> 
+    as_tibble()
 }

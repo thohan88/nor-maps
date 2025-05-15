@@ -1,8 +1,13 @@
 source("scripts/utils.R")
 
 ##################################
-# Get classification ----
+# Get classification and population ----
 ##################################
+
+pop_raw <- read_csv2("raw/population_grunnkrets.csv.gz")
+
+pop <- pop_raw |> 
+  select(year, grunnkrets_no, population)
 
 class_raw <- read_csv2("raw/classifications.csv.gz") |>
   mutate(year = year(version_date), .before = 1) |>
@@ -33,10 +38,12 @@ class_ext <- tribble(
 
 class <- bind_rows(class_raw, class_ext) |>
   arrange(desc(year), grunnkrets_no) |>
+  left_join(pop, by = c("grunnkrets_no", "year")) |> 
   group_by(year) |>
   # Fill missing values with adjacent grunnkrets
   fill(delomraade_no:delomraade_name, kommune_bydel_no:economic_region_name) |>
   ungroup() |>
+  mutate(population = coalesce(population, 0)) |> 
   nest(class = -year)
 
 ##################################
@@ -139,5 +146,3 @@ foo <- gkrets |>
   nest(data = -c(map_id, year)) |>
   left_join(class, by = "year") |> 
   mutate(foo = pmap(list(map_id, data, class), geonorge_grunnkrets_process_year, file_landmask, .progress = TRUE))
-
-#knitr::render_markdown("README.rmd")
