@@ -1,3 +1,5 @@
 # For shinylive.io compatibility
 # https://github.com/posit-dev/py-shinywidgets/issues/174
+# https://github.com/urllib3/urllib3/issues/3555
 shinywidgets==0.3.4
+urllib3==2.4.0
