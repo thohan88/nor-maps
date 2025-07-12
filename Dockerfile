@@ -17,4 +17,5 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install R packages
-RUN install2.r -e knitr languageserver sf
+RUN echo "options(repos = c(CRAN = 'https://packagemanager.rstudio.com/cran/__linux__/focal/2025-07-01'), download.file.method = 'libcurl')" >> /usr/local/lib/R/etc/Rprofile.site
+RUN install2.r -e duckdb knitr languageserver pxweb sf terra

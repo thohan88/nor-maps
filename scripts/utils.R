@@ -4,6 +4,7 @@ library(sf)
 library(duckdb)
 library(rvest)
 library(pxweb)
+library(terra)
 
 ############################# #
 # Geonorge ----
