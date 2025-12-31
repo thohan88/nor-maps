@@ -2,13 +2,25 @@
   "name": "nor-maps",
   "build": {
     "dockerfile": "Dockerfile",
-    "context": ".",
+    "context": "."
+  },
+  "containerEnv": {
+    "DISABLE_AUTH": "true",
+    "ROOT": "true"
   },
   "customizations": {
     "vscode": {
       "extensions": [
         "REditorSupport.r"
       ]
+    }
+  },
+  "forwardPorts": [8787],
+  "overrideCommand": false,
+  "portsAttributes": {
+    "8787": {
+      "label": "RStudio",
+      "onAutoForward": "notify"
     }
   }
 }
