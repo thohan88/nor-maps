@@ -56,26 +56,35 @@ CREATE OR REPLACE VIEW class_version AS (
   WITH
   class_versions AS (
     SELECT
-    class_id,
-    version_id,
-    (version->>'validFrom')::DATE version_valid_from,
-    COALESCE((version->>'validTo')::DATE, MAKE_DATE(EXTRACT(YEAR FROM CURRENT_DATE) + 1, 1, 1)) - INTERVAL 1 DAY version_valid_to,
-    UNNEST(FROM_JSON(version.classificationItems, '["json"]'))::JSON as version
+      class_id,
+      version_id,
+      UNNEST(FROM_JSON(version.classificationItems, '["json"]'))::JSON as version
+    FROM raw.class_version
+  ),
+  class_versions_validity AS (
+    SELECT
+      class_id,
+      version_id,
+      (version->>'validFrom')::DATE as version_valid_from,
+      COALESCE((version->>'validTo')::DATE, MAKE_DATE(EXTRACT(YEAR FROM CURRENT_DATE)::INT + 1, 1, 1)) - INTERVAL 1 DAY as version_valid_to
     FROM raw.class_version
   )
 
   SELECT
-    class_id,
-    version_id,
-    version_valid_from,
-    version_valid_to,
-    (version->>'code') as code,
-    NULLIF(version->>'parentCode', '') as parent_code,
-    (version->>'level')::INT as level,
-    (version->>'name') as name,
-    (version->>'shortName')::TEXT as short_name,
-    NULLIF(version->>'notes', '') as notes,
-  FROM class_versions
+    cv.class_id,
+    cv.version_id,
+    cvv.version_valid_from,
+    cvv.version_valid_to,
+    (cv.version->>'code') as code,
+    NULLIF(cv.version->>'parentCode', '') as parent_code,
+    (cv.version->>'level')::INT as level,
+    (cv.version->>'name') as name,
+    (cv.version->>'shortName')::TEXT as short_name,
+    NULLIF(cv.version->>'notes', '') as notes
+  FROM class_versions cv
+  JOIN class_versions_validity cvv 
+    ON cv.class_id = cvv.class_id 
+    AND cv.version_id = cvv.version_id
 );
 
 CREATE OR REPLACE VIEW class_correspondance AS (
