@@ -257,7 +257,7 @@ geonorge_grunnkrets_process_year <- function(
 
 con_db <- function() {
   con <- dbConnect(duckdb(), "raw/nor_maps.db")
-  foo <- dbExecute(con, read_file("schema.sql"))
+  foo <- dbExecute(con, read_file("scripts/schema.sql"))
   con
 }
 
@@ -280,6 +280,9 @@ ssb_get_data <- function(link) {
     resp_body_string()
 }
 
+insist_ssb_get_data <- insistently(ssb_get_data, quiet = FALSE)
+possib_ssb_get_data <- possibly(insist_ssb_get_data, otherwise = NA_character_)
+
 ssb_store_class_version <- function(class_id, version_id, version_link) {
   data <- tibble(class_id, version_id, version_link) |>
     mutate(version = map_chr(version_link, ssb_get_data, .progress = TRUE)) |>
@@ -300,7 +303,7 @@ ssb_store_class_correspondance <- function(
   link
 ) {
   data <- tibble(class_id, version_id, correspondance_id, link) |>
-    mutate(correspondance = map_chr(link, ssb_get_data, .progress = TRUE)) |>
+    mutate(correspondance = map_chr(link, possib_ssb_get_data, .progress = TRUE)) |>
     select(-link)
 
   dbWriteTable(
