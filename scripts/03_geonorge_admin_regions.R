@@ -50,15 +50,19 @@ class <- bind_rows(class_raw, class_ext) |>
 # Grunnkrets ----
 ##################################
 
+# Kartverket often delays updates to the historic dataset series
+# E.g. 2025 would be missing from historic series after 01.01.2026
+
 year_min <- 2002
 
 gkrets_current <- tibble(
   map_id = "51d279f8-e2be-4f5e-9f72-1a53f7535ec1",
-  year = 2025
+  year = 2026
 )
-gkrets_2024 <- tibble(
+
+gkrets_2025 <- tibble(
   map_id = "1f6e38a3-ca49-41d2-99bc-012deefe92d9",
-  year = 2024
+  year = 2025
 )
 
 gkrets_historic <- request("https://kartkatalog.geonorge.no/api/getdata/") |>
@@ -71,7 +75,7 @@ gkrets_historic <- request("https://kartkatalog.geonorge.no/api/getdata/") |>
   arrange(desc(year)) |>
   filter(year >= year_min)
 
-gkrets <- bind_rows(gkrets_current, gkrets_2024, gkrets_historic) |>
+gkrets <- bind_rows(gkrets_current, gkrets_2025, gkrets_historic) |>
   distinct(year, .keep_all = TRUE) |>
   arrange(desc(year))
 
@@ -130,6 +134,13 @@ fn_versioned <- "maps/{version}/{year}/{boundary}/{level_name}.geojson"
 
 file_landmask <- "raw/norway_landmask.geojson.gz"
 
+##################################
+# Export ----
+##################################
+
+update_current <- TRUE
+anti_join_dir <- if (update_current) "maps/versioned" else "maps"
+
 foo <- gkrets |>
   crossing(map_size) |>
   crossing(levels_accumulated) |>
@@ -142,7 +153,7 @@ foo <- gkrets |>
   mutate(file_name = ifelse(current, str_glue(fn_current), str_glue(fn_versioned))) |>
   mutate(foo = map(dirname(file_name), dir.create, recursive=TRUE, showWarnings=FALSE)) |>
   select(-foo) |>
-  anti_join(tibble(file_name = dir("maps", full.names = TRUE, recursive = TRUE)), by = "file_name") |> 
+  anti_join(tibble(file_name = dir(anti_join_dir, full.names = TRUE, recursive = TRUE)), by = "file_name") |> 
   nest(data = -c(map_id, year)) |>
   left_join(class, by = "year") |> 
   mutate(foo = pmap(list(map_id, data, class), geonorge_grunnkrets_process_year, file_landmask, .progress = TRUE))
